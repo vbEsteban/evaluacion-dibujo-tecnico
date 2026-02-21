@@ -22,11 +22,10 @@
         .ayuda-toolbox { width: 100%; text-align: center; margin: 0 0 10px 0; color: #d35400; font-size: 0.95em; font-weight: bold; display: block; }
         #toolbox { display: flex; flex-wrap: wrap; justify-content: center; gap: 15px; align-items: center; padding-bottom: 5px; }
         
-        /* TODAS LAS PIEZAS: Ahora TODAS son negro absoluto (brightness(0)) */
+        /* TODAS LAS PIEZAS: Negro absoluto y alto contraste */
         .draggable { 
             position: relative; z-index: 999; object-fit: contain; cursor: grab; touch-action: none; user-select: none; 
             image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges;
-            /* brightness(0) vuelve negras todas las líneas. Los drop-shadows crean un halo blanco alrededor para que resalte */
             filter: brightness(0) drop-shadow(0px 0px 3px rgba(255,255,255,0.9)) drop-shadow(0px 1px 2px rgba(0,0,0,0.3)); 
             padding: 5px; border-radius: 4px; background: rgba(255,255,255,0.5);
         }
@@ -41,11 +40,8 @@
 
         /* LIENZO DE DIBUJO */
         #canvas-area { 
-            width: 100%; 
-            max-width: 550px; 
-            height: 340px;    
-            margin: 0 auto 20px auto; 
-            background-color: #fff; 
+            width: 100%; max-width: 550px; height: 340px;    
+            margin: 0 auto 20px auto; background-color: #fff; 
             background-image: radial-gradient(#bdc3c7 1px, transparent 1px);
             background-size: 20px 20px;
             border: 2px solid #34495e; border-radius: 4px;
@@ -71,14 +67,11 @@
         /* IMÁGENES DE REFERENCIA ALINEADAS (PREGUNTA 3) */
         .vistas-referencia { 
             background: #fff; padding: 15px; border: 1px solid #ddd; border-radius: 6px; 
-            /* Flexbox para alinear perfectamente los inputs abajo */
             display: flex; flex-direction: column; justify-content: flex-end; align-items: center;
             height: 100%; box-sizing: border-box;
         }
         .vistas-referencia img { 
-            max-width: 100%; height: 70px; object-fit: contain; margin-bottom: 15px; 
-            /* Filtro para que las vistas de referencia sean negro puro también */
-            filter: brightness(0); 
+            max-width: 100%; height: 70px; object-fit: contain; margin-bottom: 15px; filter: brightness(0); 
         }
 
         /* BOTONES */
@@ -107,7 +100,6 @@
                 <img src="sup2.png" class="draggable pieza-grande" data-id="vista-sup" alt="Vista Superior">
                 <img src="front_2.png" class="draggable pieza-grande" data-id="vista-front" alt="Vista Frontal">
                 <img src="lat1.png" class="draggable pieza-pequena" data-id="vista-lat" alt="Vista Lateral">
-                
                 <img src="sup1.png" class="draggable pieza-grande" data-id="cotas-sup" alt="Cotas Superior">
                 <img src="front1.png" class="draggable pieza-grande" data-id="cotas-front" alt="Cotas Frontal">
                 <img src="lat2.png" class="draggable pieza-pequena" data-id="cotas-lat" alt="Cotas Lateral">
@@ -179,7 +171,9 @@
                 </div>
 
             </form>
-        </div> <div class="botones-accion">
+        </div>
+
+        <div class="botones-accion">
             <button class="btn-reset" type="button" onclick="empezarDeCero()">↻ Empezar de cero</button>
             <button class="btn-generar" type="button" onclick="compilarPlano()" id="btn-submit">⬇ Descargar Evaluación</button>
         </div>
@@ -207,10 +201,7 @@
 
         function dragMoveListener (event) {
             var target = event.target;
-            
-            // Le quitamos el fondo semi-blanco al arrastrar para que se fusione con el lienzo
             target.style.background = 'transparent'; 
-
             var x = (parseFloat(target.getAttribute('data-x')) || 0) + event.dx;
             var y = (parseFloat(target.getAttribute('data-y')) || 0) + event.dy;
 
@@ -225,13 +216,11 @@
                     el.style.transform = 'translate(0px, 0px)';
                     el.setAttribute('data-x', 0);
                     el.setAttribute('data-y', 0);
-                    el.style.background = 'rgba(255,255,255,0.5)'; // Restaurar fondo inicial
+                    el.style.background = 'rgba(255,255,255,0.5)'; 
                 });
-
                 document.getElementById('form-evaluacion').reset();
                 document.getElementById('resultado-imagen').style.display = 'none';
                 document.getElementById('mensaje-descarga').style.display = 'none';
-                
                 window.scrollTo({ top: 0, behavior: 'smooth' });
             }
         }
@@ -247,11 +236,39 @@
             }
 
             const zonaCaptura = document.querySelector("#zona-captura");
+            const rectZona = zonaCaptura.getBoundingClientRect();
             const btn = document.getElementById("btn-submit");
+            const clones = [];
             
             btn.innerText = "⏳ Procesando archivo...";
             btn.style.background = "#f39c12";
 
+            // 1. EL TRUCO DE LOS CLONES: Crear copias exactas DENTRO de la zona de captura
+            document.querySelectorAll('.draggable').forEach(el => {
+                const x = parseFloat(el.getAttribute('data-x')) || 0;
+                const y = parseFloat(el.getAttribute('data-y')) || 0;
+                
+                // Solo clonar las piezas que el estudiante movió de la caja
+                if (x !== 0 || y !== 0) {
+                    const rectEl = el.getBoundingClientRect();
+                    const clone = el.cloneNode(true);
+                    
+                    // Posicionamiento absoluto y exacto basado en la pantalla
+                    clone.style.position = 'absolute';
+                    clone.style.left = (rectEl.left - rectZona.left) + 'px';
+                    clone.style.top = (rectEl.top - rectZona.top) + 'px';
+                    clone.style.width = rectEl.width + 'px';
+                    clone.style.height = rectEl.height + 'px';
+                    clone.style.transform = 'none'; // Se quita el transform original
+                    clone.style.zIndex = '9999';
+                    
+                    zonaCaptura.appendChild(clone);
+                    clones.push(clone);
+                    el.style.opacity = '0'; // Ocultar el original temporalmente
+                }
+            });
+
+            // 2. Tomar la foto con html2canvas
             html2canvas(zonaCaptura, { 
                 backgroundColor: "#ffffff",
                 scale: 2, 
@@ -259,7 +276,11 @@
             }).then(canvas => {
                 const imgData = canvas.toDataURL("image/png");
                 
-                // Generar archivo para descarga automática
+                // 3. LIMPIEZA: Eliminar los clones y restaurar las piezas originales
+                clones.forEach(clone => clone.remove());
+                document.querySelectorAll('.draggable').forEach(el => el.style.opacity = '1');
+
+                // 4. Descarga automática
                 let nombreArchivo = "Evaluacion_Dibujo_" + nombre.replace(/\s+/g, '_') + ".png";
                 let a = document.createElement("a");
                 a.href = imgData;
@@ -268,7 +289,6 @@
                 a.click();
                 document.body.removeChild(a);
 
-                // Mostrar imagen generada en la web
                 const imgElement = document.getElementById("resultado-imagen");
                 const textoDescarga = document.getElementById("mensaje-descarga");
                 
@@ -286,6 +306,10 @@
                 alert("Nota: Para que la descarga funcione correctamente, este archivo debe ejecutarse desde un servidor como GitHub Pages.");
                 btn.innerText = "⬇ Descargar Evaluación";
                 btn.style.background = "#27ae60";
+                
+                // Limpieza en caso de error
+                clones.forEach(clone => clone.remove());
+                document.querySelectorAll('.draggable').forEach(el => el.style.opacity = '1');
             });
         }
     </script>
