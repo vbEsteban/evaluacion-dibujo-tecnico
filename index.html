@@ -3,118 +3,189 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Evaluación Interactiva de Dibujo Técnico</title>
+    <title>Evaluación Práctica: Dibujo Técnico</title>
     <script src="https://cdn.jsdelivr.net/npm/interactjs/dist/interact.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
-        /* ESTILOS GENERALES */
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 10px; background: #eef2f5; color: #333; }
+        /* FONDO Y CONTENEDOR */
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 15px; background: #2c3e50; color: #ecf0f1; }
+        .container { max-width: 1000px; margin: auto; }
         
-        /* Límite de ancho para PC */
-        .container { max-width: 750px; margin: auto; background: transparent; }
-        
-        h2 { text-align: center; color: #2c3e50; font-size: 1.4em; margin-bottom: 5px; }
-        .paso-texto { text-align: center; font-size: 1em; color: #555; margin-top: 0; margin-bottom: 15px; }
-        
-        #zona-captura { background: #ffffff; padding: 10px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        h2 { text-align: center; color: #ecf0f1; font-size: 1.6em; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 1px; }
+        .instruccion { text-align: center; font-size: 1em; color: #bdc3c7; margin-top: 0; margin-bottom: 15px; }
 
         /* CAJA DE HERRAMIENTAS */
-        #toolbox { display: flex; flex-wrap: wrap; gap: 10px; padding: 12px; background: #f8f9fa; border: 2px dashed #bdc3c7; margin-bottom: 15px; border-radius: 8px; justify-content: center; align-items: center; }
-        .ayuda-toolbox { width: 100%; text-align: center; margin: 0 0 8px 0; color: #7f8c8d; font-size: 0.9em; font-weight: 500; }
+        .toolbox-wrapper { 
+            background: #ecf0f1; padding: 15px; border: 2px dashed #95a5a6; border-radius: 8px; margin-bottom: 20px; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3); position: relative; z-index: 100; 
+        }
+        .ayuda-toolbox { width: 100%; text-align: center; margin: 0 0 10px 0; color: #d35400; font-size: 0.95em; font-weight: bold; display: block; }
+        #toolbox { display: flex; flex-wrap: wrap; justify-content: center; gap: 15px; align-items: center; padding-bottom: 5px; }
         
-        /* PIEZAS Y COTAS (Nitidez y sombras) */
+        /* TODAS LAS PIEZAS: Ahora TODAS son negro absoluto (brightness(0)) */
         .draggable { 
-            object-fit: contain; 
-            cursor: grab; 
-            touch-action: none; 
-            user-select: none; 
-            z-index: 10; 
-            image-rendering: -webkit-optimize-contrast; /* Para Chrome/Safari */
-            image-rendering: crisp-edges; /* Para Firefox */
-            filter: drop-shadow(0px 0px 1px rgba(0,0,0,0.4)); /* Sombra para resaltar el amarillo */
+            position: relative; z-index: 999; object-fit: contain; cursor: grab; touch-action: none; user-select: none; 
+            image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges;
+            /* brightness(0) vuelve negras todas las líneas. Los drop-shadows crean un halo blanco alrededor para que resalte */
+            filter: brightness(0) drop-shadow(0px 0px 3px rgba(255,255,255,0.9)) drop-shadow(0px 1px 2px rgba(0,0,0,0.3)); 
+            padding: 5px; border-radius: 4px; background: rgba(255,255,255,0.5);
         }
-        
-        /* Tamaños relativos de las piezas */
-        .pieza-grande { width: 18%; min-width: 90px; max-width: 140px; height: auto; } 
-        .pieza-pequena { width: 12%; min-width: 60px; max-width: 95px; height: auto; } 
+        .pieza-grande { width: 130px; height: auto; } 
+        .pieza-pequena { width: 85px; height: auto; } 
 
-        /* --- CAMBIO CLAVE AQUÍ --- */
-        /* Reducimos el ancho al 90% para que no se sienta "gigante" */
-        #canvas-area { 
-            position: relative; 
-            width: 60%; /* ANTES ERA 100% */
-            aspect-ratio: 1.39 / 1; /* Mantiene la proporción exacta de tu imagen */
-            background-color: #fff; 
-            background-image: url('Cajetin.png'); 
-            background-size: 100% 100%; 
-            background-repeat: no-repeat; 
-            border: 1px solid #7f8c8d; 
-            margin: 0 auto; /* Esto lo mantiene centrado */
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1); /* Sutil sombra para darle profundidad */
+        /* ZONA DE CAPTURA */
+        #zona-captura { 
+            position: relative; z-index: 10; background: #ffffff; border-radius: 8px; 
+            box-shadow: 0 8px 25px rgba(0,0,0,0.5); padding: 20px; border: 1px solid #bdc3c7; color: #333; 
         }
+
+        /* LIENZO DE DIBUJO */
+        #canvas-area { 
+            width: 100%; 
+            max-width: 550px; 
+            height: 340px;    
+            margin: 0 auto 20px auto; 
+            background-color: #fff; 
+            background-image: radial-gradient(#bdc3c7 1px, transparent 1px);
+            background-size: 20px 20px;
+            border: 2px solid #34495e; border-radius: 4px;
+        }
+
+        /* FORMULARIO Y SECCIONES */
+        .ficha-tecnica { margin-top: 10px; }
+        .seccion-form { background: #f8f9fa; padding: 15px; border-radius: 6px; border-left: 4px solid #3498db; margin-bottom: 15px; }
+        h4 { margin: 0 0 10px 0; color: #2c3e50; font-size: 1.1em; }
         
-        /* FICHA TÉCNICA */
-        .ficha-tecnica { margin-top: 20px; padding-top: 15px; border-top: 2px solid #eef2f5; padding-left: 5%; padding-right: 5%; /* Alineado con el nuevo ancho del cajetín */ }
-        .ficha-tecnica h3 { margin-top: 0; color: #2c3e50; font-size: 1.2em; }
-        .form-group { margin-bottom: 12px; }
-        label { display: block; font-weight: bold; margin-bottom: 5px; color: #34495e; font-size: 0.95em; }
-        input, textarea { width: 100%; padding: 10px; box-sizing: border-box; border: 1px solid #bdc3c7; border-radius: 4px; font-family: inherit; font-size: 1em; background: #fff; }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 10px; }
+        .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; } 
+        @media (max-width: 600px) { .grid-2, .grid-3 { grid-template-columns: 1fr; } } 
         
-        /* BOTONES Y RESULTADOS */
-        button { display: block; width: 90%; /* Ajustado al ancho del cajetín */ margin: 20px auto 0 auto; padding: 15px; background: #27ae60; color: white; border: none; font-size: 1.1em; font-weight: bold; border-radius: 6px; cursor: pointer; box-shadow: 0 4px 6px rgba(39, 174, 96, 0.2); }
-        button:hover { background: #219653; }
-        #resultado-imagen { max-width: 90%; /* Ajustado al ancho del cajetín */ margin: 20px auto; border: 2px solid #27ae60; display: none; border-radius: 4px; }
-        .instrucciones { text-align: center; font-size: 0.95em; color: #e74c3c; margin-top: 10px; font-weight: bold; }
+        label { display: block; font-weight: bold; margin-bottom: 5px; color: #34495e; font-size: 0.9em; text-align: left; }
+        input[type="text"], textarea { width: 100%; padding: 10px; box-sizing: border-box; border: 1px solid #bdc3c7; border-radius: 4px; font-family: inherit; font-size: 1em; }
+        input[type="text"] { text-align: center; }
         
-        .creditos { text-align: center; margin-top: 30px; font-size: 0.9em; color: #7f8c8d; padding-bottom: 20px; }
-        .creditos strong { color: #2c3e50; }
+        .opciones-grupo { display: flex; flex-wrap: wrap; gap: 10px 20px; }
+        .opcion-item { display: flex; align-items: center; font-weight: normal; color: #333; cursor: pointer; }
+        .opcion-item input { margin-right: 8px; width: 18px; height: 18px; cursor: pointer; }
+
+        /* IMÁGENES DE REFERENCIA ALINEADAS (PREGUNTA 3) */
+        .vistas-referencia { 
+            background: #fff; padding: 15px; border: 1px solid #ddd; border-radius: 6px; 
+            /* Flexbox para alinear perfectamente los inputs abajo */
+            display: flex; flex-direction: column; justify-content: flex-end; align-items: center;
+            height: 100%; box-sizing: border-box;
+        }
+        .vistas-referencia img { 
+            max-width: 100%; height: 70px; object-fit: contain; margin-bottom: 15px; 
+            /* Filtro para que las vistas de referencia sean negro puro también */
+            filter: brightness(0); 
+        }
+
+        /* BOTONES */
+        .botones-accion { display: flex; gap: 15px; margin-top: 25px; flex-wrap: wrap; }
+        button { flex: 1; padding: 15px; color: white; border: none; font-size: 1.1em; font-weight: bold; border-radius: 6px; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.2); transition: 0.2s; min-width: 200px; }
+        .btn-generar { background: #27ae60; }
+        .btn-generar:hover { background: #219653; }
+        .btn-reset { background: #e74c3c; }
+        .btn-reset:hover { background: #c0392b; }
+        
+        #resultado-imagen { max-width: 100%; margin: 15px auto; border: 4px solid #27ae60; display: none; border-radius: 4px; box-shadow: 0 10px 20px rgba(0,0,0,0.4); }
+        .texto-descarga { text-align: center; font-size: 1.1em; color: #f1c40f; margin-top: 20px; font-weight: normal; display: none; background: rgba(0,0,0,0.3); padding: 15px; border-radius: 6px; }
+        
+        .creditos { text-align: center; margin-top: 40px; font-size: 0.9em; color: #95a5a6; }
     </style>
 </head>
 <body>
+
     <div class="container">
-        <h2>Evaluación: Ensamblaje de Planos</h2>
-        <p class="paso-texto"><strong>Paso 1:</strong> Arrastra las vistas y cotas al formato.</p>
+        <h2>Evaluación Práctica</h2>
+        <p class="instruccion">Arma el plano técnico arrastrando las vistas y completa la ficha técnica.</p>
         
-        <div id="zona-captura">
-            
+        <div class="toolbox-wrapper">
+            <span class="ayuda-toolbox">↓ Arrastra las piezas de aquí hacia la cuadrícula de dibujo ↓</span>
             <div id="toolbox">
-                <p class="ayuda-toolbox">(Arrastra las piezas de esta caja hacia el plano)</p>
-                
                 <img src="sup2.png" class="draggable pieza-grande" data-id="vista-sup" alt="Vista Superior">
                 <img src="front_2.png" class="draggable pieza-grande" data-id="vista-front" alt="Vista Frontal">
-                
                 <img src="lat1.png" class="draggable pieza-pequena" data-id="vista-lat" alt="Vista Lateral">
                 
                 <img src="sup1.png" class="draggable pieza-grande" data-id="cotas-sup" alt="Cotas Superior">
                 <img src="front1.png" class="draggable pieza-grande" data-id="cotas-front" alt="Cotas Frontal">
-                
                 <img src="lat2.png" class="draggable pieza-pequena" data-id="cotas-lat" alt="Cotas Lateral">
             </div>
-
-            <div id="canvas-area"></div>
-
-            <div class="ficha-tecnica">
-                <h3>Paso 2: Ficha Técnica</h3>
-                <div class="form-group">
-                    <label>Nombre del Estudiante:</label>
-                    <input type="text" id="nombre" placeholder="Nombre completo">
-                </div>
-                <div class="form-group">
-                    <label>Material y Escala a usar:</label>
-                    <input type="text" id="datos-tecnicos" placeholder="Ej: Cerámica / Escala 1:1">
-                </div>
-                <div class="form-group">
-                    <label>Observaciones de Medidas:</label>
-                    <textarea id="cuestionario" rows="2" placeholder="Escribe aquí observaciones..."></textarea>
-                </div>
-            </div>
-            
         </div>
 
-        <button onclick="compilarPlano()">Paso 3: Terminar y Generar Plano</button>
-        <p class="instrucciones" id="texto-descarga" style="display:none;">👆 ¡LISTO! Mantén presionada la imagen final generada abajo para guardarla y enviarla.</p>
+        <div id="zona-captura">
+            
+            <div id="canvas-area"></div>
+
+            <form id="form-evaluacion" class="ficha-tecnica">
+                
+                <div class="seccion-form">
+                    <h4>1. Datos del Estudiante (Obligatorio)</h4>
+                    <div class="grid-2">
+                        <div>
+                            <label>Nombre Completo:</label>
+                            <input type="text" id="nombre" required placeholder="Ej: Ana María Pérez">
+                        </div>
+                        <div>
+                            <label>Documento de Identidad:</label>
+                            <input type="text" id="documento" required placeholder="Ej: 1000123456">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="seccion-form">
+                    <h4>2. Configuración del Cajetín</h4>
+                    <label>Si vamos a generar el rótulo del plano, ¿qué opciones debería llevar?</label>
+                    <div class="opciones-grupo">
+                        <label class="opcion-item"><input type="checkbox" name="rotulo" value="Escala"> Escala</label>
+                        <label class="opcion-item"><input type="checkbox" name="rotulo" value="Fecha"> Fecha</label>
+                        <label class="opcion-item"><input type="checkbox" name="rotulo" value="Material"> Material</label>
+                        <label class="opcion-item"><input type="checkbox" name="rotulo" value="Tolerancias"> Tolerancias</label>
+                        <label class="opcion-item"><input type="checkbox" name="rotulo" value="Dibujante"> Nombre Dibujante</label>
+                        <label class="opcion-item"><input type="checkbox" name="rotulo" value="Proyeccion"> Símbolo Proyección</label>
+                    </div>
+                </div>
+
+                <div class="seccion-form">
+                    <h4>3. Identificación de Vistas</h4>
+                    <label style="margin-bottom: 10px;">Escribe qué tipo de vista es cada una (Superior, Frontal o Lateral):</label>
+                    <div class="grid-3">
+                        <div class="vistas-referencia">
+                            <img src="sup2.png" alt="Vista 1">
+                            <input type="text" placeholder="Nombre de la vista...">
+                        </div>
+                        <div class="vistas-referencia">
+                            <img src="front_2.png" alt="Vista 2">
+                            <input type="text" placeholder="Nombre de la vista...">
+                        </div>
+                        <div class="vistas-referencia">
+                            <img src="lat1.png" alt="Vista 3">
+                            <input type="text" placeholder="Nombre de la vista...">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="seccion-form">
+                    <h4>4. Análisis Técnico</h4>
+                    <label>¿Quedó faltando alguna línea de eje en las vistas de la taza?</label>
+                    <div class="opciones-grupo" style="margin-bottom: 15px;">
+                        <label class="opcion-item"><input type="radio" name="linea_eje" value="Si"> Sí, hizo falta.</label>
+                        <label class="opcion-item"><input type="radio" name="linea_eje" value="No"> No, está completo.</label>
+                    </div>
+                    
+                    <label>¿Por qué?</label>
+                    <textarea id="justificacion_eje" rows="2" placeholder="Escribe la justificación de tu respuesta aquí..."></textarea>
+                </div>
+
+            </form>
+        </div> <div class="botones-accion">
+            <button class="btn-reset" type="button" onclick="empezarDeCero()">↻ Empezar de cero</button>
+            <button class="btn-generar" type="button" onclick="compilarPlano()" id="btn-submit">⬇ Descargar Evaluación</button>
+        </div>
         
-        <img id="resultado-imagen" alt="Plano Final del Estudiante">
+        <p class="texto-descarga" id="mensaje-descarga"></p>
+        <img id="resultado-imagen" alt="Evaluación Final del Estudiante">
 
         <div class="creditos">
             Desarrollado por <strong>Esteban Vargas</strong> para el <strong>Tecnológico de Antioquia</strong>.
@@ -136,6 +207,10 @@
 
         function dragMoveListener (event) {
             var target = event.target;
+            
+            // Le quitamos el fondo semi-blanco al arrastrar para que se fusione con el lienzo
+            target.style.background = 'transparent'; 
+
             var x = (parseFloat(target.getAttribute('data-x')) || 0) + event.dx;
             var y = (parseFloat(target.getAttribute('data-y')) || 0) + event.dy;
 
@@ -144,33 +219,72 @@
             target.setAttribute('data-y', y);
         }
 
+        function empezarDeCero() {
+            if(confirm("¿Estás seguro de que quieres devolver todo y empezar de cero?")) {
+                document.querySelectorAll('.draggable').forEach(el => {
+                    el.style.transform = 'translate(0px, 0px)';
+                    el.setAttribute('data-x', 0);
+                    el.setAttribute('data-y', 0);
+                    el.style.background = 'rgba(255,255,255,0.5)'; // Restaurar fondo inicial
+                });
+
+                document.getElementById('form-evaluacion').reset();
+                document.getElementById('resultado-imagen').style.display = 'none';
+                document.getElementById('mensaje-descarga').style.display = 'none';
+                
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        }
+
         function compilarPlano() {
-            const zonaCaptura = document.querySelector("#zona-captura");
-            const btn = document.querySelector("button");
+            const nombre = document.getElementById('nombre').value.trim();
+            const documento = document.getElementById('documento').value.trim();
             
-            btn.innerText = "Generando imagen, espera...";
+            if (nombre === "" || documento === "") {
+                alert("⚠️ Por favor, ingresa tu Nombre Completo y Documento (Sección 1) antes de descargar.");
+                document.getElementById('nombre').focus();
+                return; 
+            }
+
+            const zonaCaptura = document.querySelector("#zona-captura");
+            const btn = document.getElementById("btn-submit");
+            
+            btn.innerText = "⏳ Procesando archivo...";
             btn.style.background = "#f39c12";
 
             html2canvas(zonaCaptura, { 
                 backgroundColor: "#ffffff",
-                scale: 2,
+                scale: 2, 
                 useCORS: true 
             }).then(canvas => {
                 const imgData = canvas.toDataURL("image/png");
+                
+                // Generar archivo para descarga automática
+                let nombreArchivo = "Evaluacion_Dibujo_" + nombre.replace(/\s+/g, '_') + ".png";
+                let a = document.createElement("a");
+                a.href = imgData;
+                a.download = nombreArchivo;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+
+                // Mostrar imagen generada en la web
                 const imgElement = document.getElementById("resultado-imagen");
-                const textoDescarga = document.getElementById("texto-descarga");
+                const textoDescarga = document.getElementById("mensaje-descarga");
                 
                 imgElement.src = imgData;
                 imgElement.style.display = "block";
+                
+                textoDescarga.innerHTML = `<strong>¡EXCELENTE! Tu evaluación se ha descargado en tu dispositivo.</strong><br><br>Paso Final: Adjunta la imagen descargada en un correo electrónico y envíala a tu profesor. <br><span style="font-size:0.8em; color:#bdc3c7;">(Si no se descargó automáticamente, mantén presionada la imagen de abajo para guardarla)</span>`;
                 textoDescarga.style.display = "block";
                 
-                btn.innerText = "Imagen Generada con Éxito";
+                btn.innerText = "✓ Evaluación Descargada";
                 btn.style.background = "#27ae60";
                 
-                imgElement.scrollIntoView({ behavior: 'smooth' });
+                textoDescarga.scrollIntoView({ behavior: 'smooth' });
             }).catch(error => {
-                alert("Recuerda: El error de generación es normal si abres el archivo localmente. Funcionará perfecto al subirlo a internet.");
-                btn.innerText = "Paso 3: Terminar y Generar Plano";
+                alert("Nota: Para que la descarga funcione correctamente, este archivo debe ejecutarse desde un servidor como GitHub Pages.");
+                btn.innerText = "⬇ Descargar Evaluación";
                 btn.style.background = "#27ae60";
             });
         }
