@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Evaluación Interactiva de Dibujo Técnico</title>
+    <script src="https://cdn.jsdelivr.net/npm/interactjs/dist/interact.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        /* ESTILOS GENERALES */
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 10px; background: #eef2f5; color: #333; }
+        
+        /* Límite de ancho para PC */
+        .container { max-width: 750px; margin: auto; background: transparent; }
+        
+        h2 { text-align: center; color: #2c3e50; font-size: 1.4em; margin-bottom: 5px; }
+        .paso-texto { text-align: center; font-size: 1em; color: #555; margin-top: 0; margin-bottom: 15px; }
+        
+        #zona-captura { background: #ffffff; padding: 10px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+
+        /* CAJA DE HERRAMIENTAS */
+        #toolbox { display: flex; flex-wrap: wrap; gap: 10px; padding: 12px; background: #f8f9fa; border: 2px dashed #bdc3c7; margin-bottom: 15px; border-radius: 8px; justify-content: center; align-items: center; }
+        .ayuda-toolbox { width: 100%; text-align: center; margin: 0 0 8px 0; color: #7f8c8d; font-size: 0.9em; font-weight: 500; }
+        
+        /* PIEZAS Y COTAS (Nitidez y sombras) */
+        .draggable { 
+            object-fit: contain; 
+            cursor: grab; 
+            touch-action: none; 
+            user-select: none; 
+            z-index: 10; 
+            image-rendering: -webkit-optimize-contrast; /* Para Chrome/Safari */
+            image-rendering: crisp-edges; /* Para Firefox */
+            filter: drop-shadow(0px 0px 1px rgba(0,0,0,0.4)); /* Sombra para resaltar el amarillo */
+        }
+        
+        /* Tamaños relativos de las piezas */
+        .pieza-grande { width: 18%; min-width: 90px; max-width: 140px; height: auto; } 
+        .pieza-pequena { width: 12%; min-width: 60px; max-width: 95px; height: auto; } 
+
+        /* --- CAMBIO CLAVE AQUÍ --- */
+        /* Reducimos el ancho al 90% para que no se sienta "gigante" */
+        #canvas-area { 
+            position: relative; 
+            width: 60%; /* ANTES ERA 100% */
+            aspect-ratio: 1.39 / 1; /* Mantiene la proporción exacta de tu imagen */
+            background-color: #fff; 
+            background-image: url('Cajetin.png'); 
+            background-size: 100% 100%; 
+            background-repeat: no-repeat; 
+            border: 1px solid #7f8c8d; 
+            margin: 0 auto; /* Esto lo mantiene centrado */
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1); /* Sutil sombra para darle profundidad */
+        }
+        
+        /* FICHA TÉCNICA */
+        .ficha-tecnica { margin-top: 20px; padding-top: 15px; border-top: 2px solid #eef2f5; padding-left: 5%; padding-right: 5%; /* Alineado con el nuevo ancho del cajetín */ }
+        .ficha-tecnica h3 { margin-top: 0; color: #2c3e50; font-size: 1.2em; }
+        .form-group { margin-bottom: 12px; }
+        label { display: block; font-weight: bold; margin-bottom: 5px; color: #34495e; font-size: 0.95em; }
+        input, textarea { width: 100%; padding: 10px; box-sizing: border-box; border: 1px solid #bdc3c7; border-radius: 4px; font-family: inherit; font-size: 1em; background: #fff; }
+        
+        /* BOTONES Y RESULTADOS */
+        button { display: block; width: 90%; /* Ajustado al ancho del cajetín */ margin: 20px auto 0 auto; padding: 15px; background: #27ae60; color: white; border: none; font-size: 1.1em; font-weight: bold; border-radius: 6px; cursor: pointer; box-shadow: 0 4px 6px rgba(39, 174, 96, 0.2); }
+        button:hover { background: #219653; }
+        #resultado-imagen { max-width: 90%; /* Ajustado al ancho del cajetín */ margin: 20px auto; border: 2px solid #27ae60; display: none; border-radius: 4px; }
+        .instrucciones { text-align: center; font-size: 0.95em; color: #e74c3c; margin-top: 10px; font-weight: bold; }
+        
+        .creditos { text-align: center; margin-top: 30px; font-size: 0.9em; color: #7f8c8d; padding-bottom: 20px; }
+        .creditos strong { color: #2c3e50; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Evaluación: Ensamblaje de Planos</h2>
+        <p class="paso-texto"><strong>Paso 1:</strong> Arrastra las vistas y cotas al formato.</p>
+        
+        <div id="zona-captura">
+            
+            <div id="toolbox">
+                <p class="ayuda-toolbox">(Arrastra las piezas de esta caja hacia el plano)</p>
+                
+                <img src="sup2.png" class="draggable pieza-grande" data-id="vista-sup" alt="Vista Superior">
+                <img src="front_2.png" class="draggable pieza-grande" data-id="vista-front" alt="Vista Frontal">
+                
+                <img src="lat1.png" class="draggable pieza-pequena" data-id="vista-lat" alt="Vista Lateral">
+                
+                <img src="sup1.png" class="draggable pieza-grande" data-id="cotas-sup" alt="Cotas Superior">
+                <img src="front1.png" class="draggable pieza-grande" data-id="cotas-front" alt="Cotas Frontal">
+                
+                <img src="lat2.png" class="draggable pieza-pequena" data-id="cotas-lat" alt="Cotas Lateral">
+            </div>
+
+            <div id="canvas-area"></div>
+
+            <div class="ficha-tecnica">
+                <h3>Paso 2: Ficha Técnica</h3>
+                <div class="form-group">
+                    <label>Nombre del Estudiante:</label>
+                    <input type="text" id="nombre" placeholder="Nombre completo">
+                </div>
+                <div class="form-group">
+                    <label>Material y Escala a usar:</label>
+                    <input type="text" id="datos-tecnicos" placeholder="Ej: Cerámica / Escala 1:1">
+                </div>
+                <div class="form-group">
+                    <label>Observaciones de Medidas:</label>
+                    <textarea id="cuestionario" rows="2" placeholder="Escribe aquí observaciones..."></textarea>
+                </div>
+            </div>
+            
+        </div>
+
+        <button onclick="compilarPlano()">Paso 3: Terminar y Generar Plano</button>
+        <p class="instrucciones" id="texto-descarga" style="display:none;">👆 ¡LISTO! Mantén presionada la imagen final generada abajo para guardarla y enviarla.</p>
+        
+        <img id="resultado-imagen" alt="Plano Final del Estudiante">
+
+        <div class="creditos">
+            Desarrollado por <strong>Esteban Vargas</strong> para el <strong>Tecnológico de Antioquia</strong>.
+        </div>
+    </div>
+
+    <script>
+        interact('.draggable').draggable({
+            inertia: true,
+            modifiers: [
+                interact.modifiers.restrictRect({
+                    restriction: 'body',
+                    endOnly: true
+                })
+            ],
+            autoScroll: true,
+            listeners: { move: dragMoveListener }
+        });
+
+        function dragMoveListener (event) {
+            var target = event.target;
+            var x = (parseFloat(target.getAttribute('data-x')) || 0) + event.dx;
+            var y = (parseFloat(target.getAttribute('data-y')) || 0) + event.dy;
+
+            target.style.transform = 'translate(' + x + 'px, ' + y + 'px)';
+            target.setAttribute('data-x', x);
+            target.setAttribute('data-y', y);
+        }
+
+        function compilarPlano() {
+            const zonaCaptura = document.querySelector("#zona-captura");
+            const btn = document.querySelector("button");
+            
+            btn.innerText = "Generando imagen, espera...";
+            btn.style.background = "#f39c12";
+
+            html2canvas(zonaCaptura, { 
+                backgroundColor: "#ffffff",
+                scale: 2,
+                useCORS: true 
+            }).then(canvas => {
+                const imgData = canvas.toDataURL("image/png");
+                const imgElement = document.getElementById("resultado-imagen");
+                const textoDescarga = document.getElementById("texto-descarga");
+                
+                imgElement.src = imgData;
+                imgElement.style.display = "block";
+                textoDescarga.style.display = "block";
+                
+                btn.innerText = "Imagen Generada con Éxito";
+                btn.style.background = "#27ae60";
+                
+                imgElement.scrollIntoView({ behavior: 'smooth' });
+            }).catch(error => {
+                alert("Recuerda: El error de generación es normal si abres el archivo localmente. Funcionará perfecto al subirlo a internet.");
+                btn.innerText = "Paso 3: Terminar y Generar Plano";
+                btn.style.background = "#27ae60";
+            });
+        }
+    </script>
+</body>
+</html>
