@@ -167,7 +167,7 @@
                     </div>
                     
                     <label>¿Por qué?</label>
-                    <textarea id="justificacion_eje" rows="2" placeholder="Escribe la justificación de tu respuesta aquí..." style="overflow: hidden;"></textarea>
+                    <textarea id="justificacion_eje" rows="3" placeholder="Escribe la justificación de tu respuesta aquí..."></textarea>
                 </div>
 
             </form>
@@ -203,10 +203,8 @@
             var target = event.target;
             target.style.background = 'transparent'; 
             
-            // FIX: Compensar el zoom en dispositivos móviles
             var scale = window.visualViewport ? window.visualViewport.scale : 1;
             
-            // Dividir la variación del movimiento por la escala
             var x = (parseFloat(target.getAttribute('data-x')) || 0) + (event.dx / scale);
             var y = (parseFloat(target.getAttribute('data-y')) || 0) + (event.dy / scale);
 
@@ -224,7 +222,6 @@
                     el.style.background = 'rgba(255,255,255,0.5)'; 
                 });
                 document.getElementById('form-evaluacion').reset();
-                document.getElementById('justificacion_eje').style.height = 'auto'; // Restaurar altura
                 document.getElementById('resultado-imagen').style.display = 'none';
                 document.getElementById('mensaje-descarga').style.display = 'none';
                 window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -241,11 +238,6 @@
                 return; 
             }
 
-            // FIX: Expandir el textarea al tamaño total de su contenido antes de tomar la foto
-            const textarea = document.getElementById("justificacion_eje");
-            textarea.style.height = "auto"; 
-            textarea.style.height = textarea.scrollHeight + "px";
-
             const zonaCaptura = document.querySelector("#zona-captura");
             const rectZona = zonaCaptura.getBoundingClientRect();
             const btn = document.getElementById("btn-submit");
@@ -254,7 +246,23 @@
             btn.innerText = "⏳ Procesando archivo...";
             btn.style.background = "#f39c12";
 
-            // 1. EL TRUCO DE LOS CLONES
+            // --- TRUCO MAGICO PARA EL TEXTAREA ---
+            // Creamos un div falso que reemplace al textarea temporalmente para que html2canvas lo lea bien
+            const textarea = document.getElementById("justificacion_eje");
+            const fakeTextarea = document.createElement("div");
+            
+            fakeTextarea.style.cssText = window.getComputedStyle(textarea).cssText;
+            fakeTextarea.style.height = "auto";
+            fakeTextarea.style.minHeight = textarea.offsetHeight + "px";
+            fakeTextarea.style.whiteSpace = "pre-wrap"; // Mantiene los saltos de línea
+            fakeTextarea.style.wordWrap = "break-word"; // Evita que las palabras largas se corten
+            fakeTextarea.innerText = textarea.value || " ";
+
+            textarea.parentNode.insertBefore(fakeTextarea, textarea);
+            textarea.style.display = "none"; // Ocultamos el textarea original
+            // -------------------------------------
+
+            // 1. EL TRUCO DE LOS CLONES (Piezas movidas)
             document.querySelectorAll('.draggable').forEach(el => {
                 const x = parseFloat(el.getAttribute('data-x')) || 0;
                 const y = parseFloat(el.getAttribute('data-y')) || 0;
@@ -285,9 +293,13 @@
             }).then(canvas => {
                 const imgData = canvas.toDataURL("image/png");
                 
-                // 3. LIMPIEZA
+                // 3. LIMPIEZA TOTAL
                 clones.forEach(clone => clone.remove());
                 document.querySelectorAll('.draggable').forEach(el => el.style.opacity = '1');
+                
+                // Restauramos el textarea original
+                fakeTextarea.remove();
+                textarea.style.display = "block";
 
                 // 4. Descarga automática
                 let nombreArchivo = "Evaluacion_Dibujo_" + nombre.replace(/\s+/g, '_') + ".png";
@@ -316,8 +328,11 @@
                 btn.innerText = "⬇ Descargar Evaluación";
                 btn.style.background = "#27ae60";
                 
+                // Limpieza en caso de error
                 clones.forEach(clone => clone.remove());
                 document.querySelectorAll('.draggable').forEach(el => el.style.opacity = '1');
+                fakeTextarea.remove();
+                textarea.style.display = "block";
             });
         }
     </script>
