@@ -167,7 +167,7 @@
                     </div>
                     
                     <label>¿Por qué?</label>
-                    <textarea id="justificacion_eje" rows="2" placeholder="Escribe la justificación de tu respuesta aquí..."></textarea>
+                    <textarea id="justificacion_eje" rows="2" placeholder="Escribe la justificación de tu respuesta aquí..." style="overflow: hidden;"></textarea>
                 </div>
 
             </form>
@@ -202,8 +202,13 @@
         function dragMoveListener (event) {
             var target = event.target;
             target.style.background = 'transparent'; 
-            var x = (parseFloat(target.getAttribute('data-x')) || 0) + event.dx;
-            var y = (parseFloat(target.getAttribute('data-y')) || 0) + event.dy;
+            
+            // FIX: Compensar el zoom en dispositivos móviles
+            var scale = window.visualViewport ? window.visualViewport.scale : 1;
+            
+            // Dividir la variación del movimiento por la escala
+            var x = (parseFloat(target.getAttribute('data-x')) || 0) + (event.dx / scale);
+            var y = (parseFloat(target.getAttribute('data-y')) || 0) + (event.dy / scale);
 
             target.style.transform = 'translate(' + x + 'px, ' + y + 'px)';
             target.setAttribute('data-x', x);
@@ -219,6 +224,7 @@
                     el.style.background = 'rgba(255,255,255,0.5)'; 
                 });
                 document.getElementById('form-evaluacion').reset();
+                document.getElementById('justificacion_eje').style.height = 'auto'; // Restaurar altura
                 document.getElementById('resultado-imagen').style.display = 'none';
                 document.getElementById('mensaje-descarga').style.display = 'none';
                 window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -235,6 +241,11 @@
                 return; 
             }
 
+            // FIX: Expandir el textarea al tamaño total de su contenido antes de tomar la foto
+            const textarea = document.getElementById("justificacion_eje");
+            textarea.style.height = "auto"; 
+            textarea.style.height = textarea.scrollHeight + "px";
+
             const zonaCaptura = document.querySelector("#zona-captura");
             const rectZona = zonaCaptura.getBoundingClientRect();
             const btn = document.getElementById("btn-submit");
@@ -243,32 +254,30 @@
             btn.innerText = "⏳ Procesando archivo...";
             btn.style.background = "#f39c12";
 
-            // 1. EL TRUCO DE LOS CLONES: Crear copias exactas DENTRO de la zona de captura
+            // 1. EL TRUCO DE LOS CLONES
             document.querySelectorAll('.draggable').forEach(el => {
                 const x = parseFloat(el.getAttribute('data-x')) || 0;
                 const y = parseFloat(el.getAttribute('data-y')) || 0;
                 
-                // Solo clonar las piezas que el estudiante movió de la caja
                 if (x !== 0 || y !== 0) {
                     const rectEl = el.getBoundingClientRect();
                     const clone = el.cloneNode(true);
                     
-                    // Posicionamiento absoluto y exacto basado en la pantalla
                     clone.style.position = 'absolute';
                     clone.style.left = (rectEl.left - rectZona.left) + 'px';
                     clone.style.top = (rectEl.top - rectZona.top) + 'px';
                     clone.style.width = rectEl.width + 'px';
                     clone.style.height = rectEl.height + 'px';
-                    clone.style.transform = 'none'; // Se quita el transform original
+                    clone.style.transform = 'none'; 
                     clone.style.zIndex = '9999';
                     
                     zonaCaptura.appendChild(clone);
                     clones.push(clone);
-                    el.style.opacity = '0'; // Ocultar el original temporalmente
+                    el.style.opacity = '0'; 
                 }
             });
 
-            // 2. Tomar la foto con html2canvas
+            // 2. Tomar la foto
             html2canvas(zonaCaptura, { 
                 backgroundColor: "#ffffff",
                 scale: 2, 
@@ -276,7 +285,7 @@
             }).then(canvas => {
                 const imgData = canvas.toDataURL("image/png");
                 
-                // 3. LIMPIEZA: Eliminar los clones y restaurar las piezas originales
+                // 3. LIMPIEZA
                 clones.forEach(clone => clone.remove());
                 document.querySelectorAll('.draggable').forEach(el => el.style.opacity = '1');
 
@@ -307,7 +316,6 @@
                 btn.innerText = "⬇ Descargar Evaluación";
                 btn.style.background = "#27ae60";
                 
-                // Limpieza en caso de error
                 clones.forEach(clone => clone.remove());
                 document.querySelectorAll('.draggable').forEach(el => el.style.opacity = '1');
             });
